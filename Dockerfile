@@ -1,19 +1,16 @@
+# Force rebuild v2
 # Use Python 3.11
 FROM python:3.11-slim
 
-# Set the working directory
 WORKDIR /app
 
-# Copy your files into the container
-COPY requirements.txt .
-COPY app.py .
-COPY tasks.py .
+# Copy ALL files (easier than listing them one by one)
+COPY . .
 
-# Install dependencies
-RUN pip install fastapi uvicorn pydantic
+# Install EVERYTHING needed
+RUN pip install fastapi uvicorn pydantic requests google-genai
 
-# Expose the port FastAPI runs on
-EXPOSE 8000
+EXPOSE 7860
 
-# Start the server
+
 CMD ["python", "app.py"]
