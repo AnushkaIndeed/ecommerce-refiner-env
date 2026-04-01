@@ -20,3 +20,9 @@ An AI-powered agent built that extracts structured data (Brand, Color, Size) fro
 
 ### 🏁 Validation
 - Successfully returns `Reward: 1.0` upon correct brand identification.
+
+### How to Run the Agent
+-Clone this repo.
+-Install requirements: pip install -r requirements.txt.
+-Set your API Key: export GOOGLE_API_KEY="your_key".
+-Run the agent: python agent.py
