@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ecommerce-refiner"
+version = "0.1.0"
+description = "AI agent for product title refinement"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "requests",
+    "gradio",
+    "openai",
+    "google-genai",
+    "pydantic",
+    "openenv-core>=0.2.0"  
+]
+authors = [
+    {name = "anushkakohli"}
+]
+requires-python = ">=3.10"
+[project.scripts]
+server = "app:main" 
+
+[tool.setuptools.packages.find]
+where = ["."]
