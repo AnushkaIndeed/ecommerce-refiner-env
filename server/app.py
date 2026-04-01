@@ -7,6 +7,7 @@ import os
 from google import genai
 
 
+
 app = FastAPI()
 
 
@@ -43,7 +44,9 @@ async def refine(request: Request):
             "reward": 0.0
         }
 
-
+@app.get("/state")
+async def state():
+    return {"status": "active"}
 
 def refine_ui_logic(text):
     prompt = f"""
@@ -75,5 +78,12 @@ io = gr.Interface(
 app = gr.mount_gradio_app(app, io, path="/")
 
 
+
+
+def main():
+    """Entry point for the server as required by the validator."""
+    import uvicorn
+    uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    main()
