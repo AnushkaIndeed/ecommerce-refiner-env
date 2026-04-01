@@ -2,7 +2,7 @@ import requests
 from google import genai
 
 client = genai.Client(
-    api_key="AIzaSyA15uARpDDlx9_vBwu9yiEJ9xOmDHt36eo",
+    api_key="GOOGLE_API_KEY",
     http_options={'api_version': 'v1'} 
 )
 
