@@ -19,9 +19,9 @@ dependencies = [
 authors = [
     {name = "anushkakohli"}
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 [project.scripts]
-server = "app:main" 
+server = "server.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
