@@ -3,7 +3,11 @@ import uvicorn
 import random
 import gradio as gr
 from tasks import TASKS 
+import os
+from google import genai
 app = FastAPI()
+
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 @app.get("/health")
 async def health():
@@ -36,10 +40,24 @@ async def refine(request: Request):
             "observation": f"Invalid brand or refinement failed: {value}",
             "reward": 0.0
         }
-    
+
 def refine_ui_logic(text):
-    brand_guess = text.split()[0].upper() 
-    return f"Refined Brand: {brand_guess}"
+    prompt = f"""
+Extract attributes from: {text}
+Return ONLY this format:
+BRAND: [Brand]
+COLOR: [Color]
+SIZE: [Size]
+Do not include any other text or greetings.
+"""
+    try:
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        return response.text
+    except Exception as e:
+        return f"Error connecting to AI: {str(e)}"
 
 # Create the Gradio Interface
 io = gr.Interface(
