@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Request
 import uvicorn
 import random
+import gradio as gr
 from tasks import TASKS 
-
 app = FastAPI()
 
 @app.get("/health")
@@ -36,6 +36,22 @@ async def refine(request: Request):
             "observation": f"Invalid brand or refinement failed: {value}",
             "reward": 0.0
         }
+    
+def refine_ui_logic(text):
+    brand_guess = text.split()[0].upper() 
+    return f"Refined Brand: {brand_guess}"
+
+# Create the Gradio Interface
+io = gr.Interface(
+    fn=refine_ui_logic,
+    inputs=gr.Textbox(label="Paste Messy Product Title", placeholder="e.g. ADIDAS ULTRABOOST BLUE 42"),
+    outputs=gr.Textbox(label="Refined Result"),
+    title="🛒 Ecommerce Product Refiner",
+    description="Extracts structured data from messy titles using AI."
+)
+
+# Mount Gradio onto the FastAPI app at the root ("/")
+app = gr.mount_gradio_app(app, io, path="/")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=7860)
