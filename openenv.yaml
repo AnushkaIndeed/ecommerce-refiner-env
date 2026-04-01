@@ -2,4 +2,4 @@
 name: ecommerce-refiner
 version: "1.0"
 description: "AI Agent for ecommerce data refinement"
-entrypoint: "app.py"
+entrypoint: "interface.py"
