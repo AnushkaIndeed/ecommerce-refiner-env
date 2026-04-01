@@ -8,9 +8,8 @@ WORKDIR /app
 COPY . .
 
 # Install EVERYTHING needed
-RUN pip install fastapi uvicorn pydantic requests google-genai
+RUN pip install fastapi uvicorn pydantic requests google-genai gradio
 
 EXPOSE 7860
 
-
-CMD ["python", "app.py"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860", "python", "app.py"]
