@@ -1,46 +1,62 @@
+import os
 import requests
-from google import genai
+import json
+import sys # Added for flushing
+from openai import OpenAI
 
-client = genai.Client(
-    api_key="GOOGLE_API_KEY",
-    http_options={'api_version': 'v1'} 
-)
+API_BASE_URL = os.getenv("API_BASE_URL")
+MODEL_NAME = os.getenv("MODEL_NAME")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
+SPACE_URL = "https://huggingface.co/spaces/AnushkaK11/ecommerce-refiner-env" 
 
-MODEL_ID = "gemini-2.5-flash"
+client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
 
-BASE_URL = "https://anushkak11-ecommerce-refiner.hf.space"
-
-def run_agent():
+def run_inference():
+   
+    task_id = MODEL_NAME if MODEL_NAME else "ecommerce_refinement"
+    
+    print(f"[START] task={task_id}", flush=True)
+    
     try:
-        # --- PHASE 1: GET THE TASK ---
-        print("📦 Fetching task...")
-        reset_resp = requests.post(f"{BASE_URL}/reset")
-        messy_string = reset_resp.json().get("observation")
-        print(f"Target: {messy_string}")
-
-        # --- PHASE 2: AI REASONING ---
-        prompt = f"Extract the Brand from: '{messy_string}'. Return ONLY the brand name."
+        # Reset the environment
+        reset_resp = requests.post(f"{SPACE_URL}/reset")
+        if reset_resp.status_code != 200:
+            print(f"[END] task={task_id} score=0.0 steps=0", flush=True)
+            return
+            
+        observation = reset_resp.json().get("observation", "")
         
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=prompt
+        # 2. REQUIRED STEP BLOCK (Observation)
+        print(f"[STEP] step=1 reward=0.0 observation='{observation}'", flush=True)
+
+        # AI Logic
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{
+                "role": "user", 
+                "content": f"Extract the Brand from: '{observation}'. Return ONLY the brand name in uppercase."
+            }]
         )
-        
-        brand_value = response.text.strip().upper()
-        print(f"🤖 AI identified Brand: {brand_value}")
+        brand_value = response.choices[0].message.content.strip().upper()
 
-        # --- PHASE 3: SUBMIT ---
+        # Submit Step
         payload = {"field": "brand", "value": brand_value}
-        refine_resp = requests.post(f"{BASE_URL}/refine", json=payload)
+        step_resp = requests.post(f"{SPACE_URL}/step", json=payload)
         
-        if refine_resp.status_code == 200:
-            print(f"✅ Success! Reward: {refine_resp.json().get('reward')}")
-        else:
-            print(f"❌ Submission Error: {refine_resp.text}")
+        result = step_resp.json()
+        reward = result.get("reward", 0.0)
+
+        # 3. REQUIRED STEP BLOCK (Action)
+        print(f"[STEP] step=2 reward={reward} action='brand:{brand_value}'", flush=True)
+
+        # 4. REQUIRED END BLOCK
+        print(f"[END] task={task_id} score={reward} steps=2", flush=True)
 
     except Exception as e:
-        print(f"⚠️ An error occurred: {e}")
+        # 5. REQUIRED END BLOCK ON FAILURE
+        print(f"[END] task={task_id} score=0.0 steps=0", flush=True)
+        print(f"Error: {str(e)}", file=sys.stderr)
 
 if __name__ == "__main__":
-    run_agent()
+    run_inference()
