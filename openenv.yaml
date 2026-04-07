@@ -1,9 +1,8 @@
-# openenv.yaml
-name: ecommerce-refiner-agent
-version: "1.0"
-description: "AI Agent for ecommerce data refinement"
-entrypoint: inference.py
-api_port: 7860
-endpoints:
-  reset: /reset
-  step: /refine
+---
+title: Ecommerce Refiner
+emoji: 🚀
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+---

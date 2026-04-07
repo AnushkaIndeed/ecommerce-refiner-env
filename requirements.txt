@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-gradio
-google-genai
 requests
-pydantic
+gradio
+openai
+python-multipart
