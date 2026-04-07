@@ -59,7 +59,7 @@ def refine_ui_logic(text):
     """
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash", # Use the stable model ID
+            model="gemini-1.5-flash", # Use the stable model ID
             contents=prompt
         )
         return response.text
