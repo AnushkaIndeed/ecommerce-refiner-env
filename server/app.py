@@ -68,7 +68,7 @@ def refine_ui_logic(text):
     """
     try:
         
-        model_id = os.getenv("MODEL_NAME", "gemini-1.5-flash")
+        model_id = os.getenv("MODEL_NAME", "gemini-2.5-flash")
         response = client.models.generate_content(
             model=model_id,
             contents=prompt
