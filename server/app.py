@@ -38,13 +38,44 @@ async def step(request: Request):
     reward = 1.0 if val in valid_brands else 0.0
     return {"reward": reward}
 
-# Professional UI
-def ui_fn(text):
-    res = client.models.generate_content(model="gemini-2.5-flash", contents=f"Extract brand from: {text}")
-    return res.text
 
-io = gr.Interface(fn=ui_fn, inputs="text", outputs="text", title="Ecommerce Refiner")
-app = gr.mount_gradio_app(app, io, path="/")
+# --- ENHANCED GRADIO UI ---
+
+def refine_ui_logic(text):
+    """Extraction logic for the manual UI."""
+    if not text.strip():
+        return "Error: Please enter a product title."
+        
+    prompt = f"Extract ONLY the brand: {text}. Output one word only."
+    try:
+        model_id = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+        response = client.models.generate_content(
+            model=model_id,
+            contents=prompt
+        )
+        return response.text.strip().upper()
+    except Exception as e:
+        return f"AI Error: {str(e)}"
+
+# Using gr.Blocks to ensure placeholders and styling are preserved
+with gr.Blocks(theme=gr.themes.Soft()) as demo:
+    gr.Markdown("# 🛒 Ecommerce Refiner")
+    gr.Markdown("Manual testing tool for brand extraction.")
+    
+    with gr.Column():
+        # This explicitly defines the placeholder
+        input_box = gr.Textbox(
+            label="Product Title", 
+            placeholder="Enter messy title here (e.g., NIKE AIR MAX RED 10)...", 
+            lines=2
+        )
+        submit_btn = gr.Button("Extract Brand", variant="primary")
+        output_box = gr.Textbox(label="Resulting Brand")
+            
+    submit_btn.click(fn=refine_ui_logic, inputs=input_box, outputs=output_box)
+
+# Mount the 'demo' block instead of the old 'io' interface
+app = gr.mount_gradio_app(app, demo, path="/")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=7860)

@@ -1,4 +1,4 @@
-# tasks.py
+# server/tasks.py
 TASKS = {
     "easy": [
         {"input": "NIKE AIR MAX - RED - SIZE 10", "target": {"brand": "Nike", "color": "Red"}},
