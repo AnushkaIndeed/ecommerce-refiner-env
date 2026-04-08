@@ -74,8 +74,14 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             
     submit_btn.click(fn=refine_ui_logic, inputs=input_box, outputs=output_box)
 
-# Mount the 'demo' block instead of the old 'io' interface
+
+
 app = gr.mount_gradio_app(app, demo, path="/")
 
+
+def main():
+    """Entry point for the multi-mode deployment validator."""
+    uvicorn.run(app, host="0.0.0.0", port=7860, reload=False)
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    main()
