@@ -9,7 +9,7 @@ try:
 except:
     from server.tasks import TASKS as RAW_TASKS
 
-# ✅ Convert tasks into consistent format
+# Convert tasks into consistent format
 TASKS = []
 for t in RAW_TASKS:
     TASKS.append({
@@ -19,7 +19,7 @@ for t in RAW_TASKS:
 
 app = FastAPI()
 
-# 🔥 IMPORTANT: track task index (for validator detection)
+# IMPORTANT: track task index (for validator detection)
 CURRENT_TASK = None
 CURRENT_TASK_ID = 0
 
@@ -35,7 +35,7 @@ async def health():
 async def reset():
     global CURRENT_TASK, CURRENT_TASK_ID
 
-    # 🔥 Cycle through tasks (NOT random)
+    
     CURRENT_TASK = TASKS[CURRENT_TASK_ID]
     CURRENT_TASK_ID = (CURRENT_TASK_ID + 1) % len(TASKS)
 
@@ -49,17 +49,21 @@ async def step(request: Request):
 
         data = await request.json()
         val = data.get("value", "").upper().strip()
-        correct = CURRENT_TASK["target"]
 
-        # 🔥 TASK-SPECIFIC GRADER
-        if val == correct:
-            reward = 0.9
-        elif correct in val or val in correct:
-            reward = 0.6
-        elif val != "":
-            reward = 0.3
+        # 🔥 TASK-SPECIFIC GRADER (from task definition)
+        if "grader" in CURRENT_TASK and callable(CURRENT_TASK["grader"]):
+            reward = CURRENT_TASK["grader"](val, CURRENT_TASK["target"])
         else:
-            reward = 0.1
+            # Fallback grader
+            correct = CURRENT_TASK["target"]
+            if val == correct:
+                reward = 0.9
+            elif correct in val or val in correct:
+                reward = 0.6
+            elif val != "":
+                reward = 0.3
+            else:
+                reward = 0.1
 
         return {"reward": reward}
 
