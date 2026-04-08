@@ -1,33 +1,37 @@
-import os
 import random
-import uvicorn
-import gradio as gr
 from fastapi import FastAPI, Request
+import gradio as gr
+import uvicorn
 
-try:
-    from tasks import TASKS
-except ImportError:
-    from server.tasks import TASKS
+from tasks import TASKS
 
 app = FastAPI()
 
+# Precompute valid brands
 VALID_BRANDS = set()
 for diff in TASKS:
     for t in TASKS[diff]:
         VALID_BRANDS.add(t["target"]["brand"].upper())
 
 
-
+# ---------------- API ENDPOINTS ---------------- #
 
 @app.get("/health")
 async def health():
-    return {"status": "online"}
+    return {"status": "ok"}
 
+
+CURRENT_TARGET = ""
 
 @app.post("/reset")
 async def reset():
+    global CURRENT_TARGET
+
     all_tasks = TASKS["easy"] + TASKS["medium"] + TASKS["hard"]
     selected = random.choice(all_tasks)
+
+    CURRENT_TARGET = selected["target"]["brand"]
+
     return {"observation": selected["input"]}
 
 
@@ -37,14 +41,27 @@ async def step(request: Request):
         data = await request.json()
         val = data.get("value", "").upper().strip()
 
-        reward = 1.0 if val in VALID_BRANDS else 0.0
+        global CURRENT_TARGET
+
+        correct = CURRENT_TARGET.upper()
+
+        
+        if val == correct:
+            reward = 0.9   # not 1.0
+        elif correct in val or val in correct:
+            reward = 0.6   # partial match
+        elif val != "":
+            reward = 0.3   # attempt made
+        else:
+            reward = 0.1   # empty
 
         return {"reward": reward}
 
     except Exception as e:
-        # Never crash
-        return {"reward": 0.0, "error": str(e)}
+        return {"reward": 0.1, "error": str(e)}
 
+
+# ---------------- UI LOGIC ---------------- #
 
 def refine_ui_logic(text):
     if not text.strip():
@@ -57,6 +74,8 @@ def refine_ui_logic(text):
 
     return "UNKNOWN"
 
+
+# ---------------- GRADIO UI ---------------- #
 
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🛒 Ecommerce Refiner")
@@ -74,11 +93,11 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     submit_btn.click(fn=refine_ui_logic, inputs=input_box, outputs=output_box)
 
 
-# Mount UI safely
+# Mount UI at root "/"
 app = gr.mount_gradio_app(app, demo, path="/")
 
 
-
+# ---------------- ENTRY POINT ---------------- #
 
 def main():
     print("🚀 Starting FastAPI server...", flush=True)
@@ -87,4 +106,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
