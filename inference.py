@@ -12,51 +12,42 @@ SPACE_URL = "https://huggingface.co/spaces/AnushkaK11/ecommerce-refiner-env"
 
 client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
 
+
 def run_inference():
-   
-    task_id = MODEL_NAME if MODEL_NAME else "ecommerce_refinement"
-    
-    print(f"[START] task={task_id}", flush=True)
+    print(f"[START] task={MODEL_NAME}", flush=True)
     
     try:
-        # Reset the environment
-        reset_resp = requests.post(f"{SPACE_URL}/reset")
-        if reset_resp.status_code != 200:
-            print(f"[END] task={task_id} score=0.0 steps=0", flush=True)
-            return
-            
-        observation = reset_resp.json().get("observation", "")
+        reset_resp = requests.post(f"{SPACE_URL}/reset", timeout=30)
         
-        # 2. REQUIRED STEP BLOCK (Observation)
+        reset_resp.raise_for_status() 
+        
+        observation = reset_resp.json().get("observation")
         print(f"[STEP] step=1 reward=0.0 observation='{observation}'", flush=True)
 
-        # AI Logic
+        # AI LOGIC
         response = client.chat.completions.create(
             model=MODEL_NAME,
-            messages=[{
-                "role": "user", 
-                "content": f"Extract the Brand from: '{observation}'. Return ONLY the brand name in uppercase."
-            }]
+            messages=[{"role": "user", "content": f"Extract Brand: '{observation}'"}]
         )
         brand_value = response.choices[0].message.content.strip().upper()
 
-        # Submit Step
+        # STEP SUBMISSION
         payload = {"field": "brand", "value": brand_value}
-        step_resp = requests.post(f"{SPACE_URL}/step", json=payload)
-        
+        step_resp = requests.post(f"{SPACE_URL}/step", json=payload, timeout=30)
+        step_resp.raise_for_status()
+
         result = step_resp.json()
         reward = result.get("reward", 0.0)
-
-        # 3. REQUIRED STEP BLOCK (Action)
+        
         print(f"[STEP] step=2 reward={reward} action='brand:{brand_value}'", flush=True)
+        print(f"[END] task={MODEL_NAME} score={reward} steps=2", flush=True)
 
-        # 4. REQUIRED END BLOCK
-        print(f"[END] task={task_id} score={reward} steps=2", flush=True)
-
+    except requests.exceptions.RequestException as e:
+        print(f"Network Error: {e}", file=sys.stderr)
+        print(f"[END] task={MODEL_NAME} score=0.0 steps=0", flush=True)
     except Exception as e:
-        # 5. REQUIRED END BLOCK ON FAILURE
-        print(f"[END] task={task_id} score=0.0 steps=0", flush=True)
-        print(f"Error: {str(e)}", file=sys.stderr)
+        print(f"Unexpected Error: {e}", file=sys.stderr)
+        print(f"[END] task={MODEL_NAME} score=0.0 steps=0", flush=True)
 
 if __name__ == "__main__":
     run_inference()
