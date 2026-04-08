@@ -3,11 +3,13 @@ from fastapi import FastAPI, Request
 import gradio as gr
 import uvicorn
 
+# Load tasks
 try:
     from tasks import TASKS as RAW_TASKS
 except:
     from server.tasks import TASKS as RAW_TASKS
 
+# ✅ Convert tasks into consistent format
 TASKS = []
 for t in RAW_TASKS:
     TASKS.append({
@@ -17,7 +19,9 @@ for t in RAW_TASKS:
 
 app = FastAPI()
 
+# 🔥 IMPORTANT: track task index (for validator detection)
 CURRENT_TASK = None
+CURRENT_TASK_ID = 0
 
 
 # ---------------- API ENDPOINTS ---------------- #
@@ -29,9 +33,11 @@ async def health():
 
 @app.post("/reset")
 async def reset():
-    global CURRENT_TASK
+    global CURRENT_TASK, CURRENT_TASK_ID
 
-    CURRENT_TASK = random.choice(TASKS)
+    # 🔥 Cycle through tasks (NOT random)
+    CURRENT_TASK = TASKS[CURRENT_TASK_ID]
+    CURRENT_TASK_ID = (CURRENT_TASK_ID + 1) % len(TASKS)
 
     return {"observation": CURRENT_TASK["input"]}
 
@@ -45,6 +51,7 @@ async def step(request: Request):
         val = data.get("value", "").upper().strip()
         correct = CURRENT_TASK["target"]
 
+        # 🔥 TASK-SPECIFIC GRADER
         if val == correct:
             reward = 0.9
         elif correct in val or val in correct:
@@ -93,7 +100,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     submit_btn.click(fn=refine_ui_logic, inputs=input_box, outputs=output_box)
 
 
-# Mount UI
+# Mount UI at root
 app = gr.mount_gradio_app(app, demo, path="/")
 
 
