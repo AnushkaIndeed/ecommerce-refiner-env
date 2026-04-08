@@ -4,11 +4,10 @@ import uvicorn
 import gradio as gr
 from fastapi import FastAPI, Request
 from google import genai
-
 from tasks import TASKS
 
-
 app = FastAPI()
+
 
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
@@ -19,81 +18,37 @@ async def health():
 
 @app.post("/reset")
 async def reset(difficulty: str = "easy"):
-    
     task_list = TASKS.get(difficulty, TASKS["easy"])
     selected = random.choice(task_list)
     return {"observation": selected["input"]}
 
-@app.post("/refine")
 @app.post("/step")
-async def refine(request: Request):
-    """
-    The 'step' endpoint required by the validator to submit 
-    the extracted brand and receive a reward.
-    """
+async def step(request: Request):
     try:
         data = await request.json()
-        field = data.get("field", "brand")
         value = data.get("value", "").upper().strip()
     
-        valid_brands = ["ADIDAS", "NIKE", "PUMA", "REEBOK", "ASICS"]
+        # DYNAMIC VALIDATION: Check against all brands in tasks.py
+        all_brands = set()
+        for diff in TASKS:
+            for t in TASKS[diff]:
+                brand = t.get("target", {}).get("brand", "").upper()
+                if brand: all_brands.add(brand)
         
-        if value in valid_brands:
-            return {
-                "observation": f"Field '{field}' successfully refined to {value}",
-                "reward": 1.0
-            }
-        else:
-            return {
-                "observation": f"Invalid refinement for '{field}': {value}",
-                "reward": 0.0
-            }
+        if value in all_brands:
+            return {"observation": "Success", "reward": 1.0}
+        return {"observation": "Invalid Brand", "reward": 0.0}
     except Exception as e:
-        return {"observation": f"Error: {str(e)}", "reward": 0.0}
+        return {"observation": str(e), "reward": 0.0}
 
-@app.get("/state")
-async def state():
-    return {"status": "active"}
+# Gradio interface for manual testing
+def ui_fn(text):
+    model_id = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+    res = client.models.generate_content(model=model_id, contents=f"Brand of: {text}")
+    return res.text
 
-# --- GRADIO UI LOGIC ---
-
-def refine_ui_logic(text):
-    """Logic for the interactive web interface."""
-    prompt = f"""
-    Extract attributes from the product title: {text}
-    Return ONLY this format:
-    BRAND: [Brand]
-    COLOR: [Color]
-    SIZE: [Size]
-    Do not include any other text or greetings.
-    """
-    try:
-        
-        model_id = os.getenv("MODEL_NAME", "gemini-2.5-flash")
-        response = client.models.generate_content(
-            model=model_id,
-            contents=prompt
-        )
-        return response.text
-    except Exception as e:
-        return f"Error connecting to AI: {str(e)}"
-
-io = gr.Interface(
-    fn=refine_ui_logic,
-    inputs=gr.Textbox(label="Paste Messy Product Title", placeholder="e.g. ADIDAS ULTRABOOST BLUE 42"),
-    outputs=gr.Textbox(label="Refined Result"),
-    title="🛒 Ecommerce Product Refiner",
-    description="Extracts structured data from messy titles ."
-)
-
-
+io = gr.Interface(fn=ui_fn, inputs="text", outputs="text")
 app = gr.mount_gradio_app(app, io, path="/")
 
-
-def main():
-    """Required by the OpenEnv validator for multi-mode deployment."""
-    uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=False)
-
 if __name__ == "__main__":
-    main()
-    
+    uvicorn.run("app:app", host="0.0.0.0", port=7860)
