@@ -4,9 +4,11 @@ WORKDIR /app
 
 COPY . .
 
-RUN pip install --no-cache-dir fastapi uvicorn requests openai python-multipart
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir fastapi uvicorn requests openai gradio python-multipart
 
 ENV PYTHONPATH=/app/server:/app
+ENV PYTHONUNBUFFERED=1
 
 EXPOSE 7860
 
