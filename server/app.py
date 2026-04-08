@@ -3,19 +3,17 @@ from fastapi import FastAPI, Request
 import gradio as gr
 import uvicorn
 
-
 try:
     from tasks import TASKS as RAW_TASKS
 except:
     from server.tasks import TASKS as RAW_TASKS
 
 TASKS = []
-for diff in RAW_TASKS:
-    for t in RAW_TASKS[diff]:
-        TASKS.append({
-            "input": t["input"],
-            "target": t["target"]["brand"].upper()
-        })
+for t in RAW_TASKS:
+    TASKS.append({
+        "input": t["input"],
+        "target": t["target"].upper()
+    })
 
 app = FastAPI()
 
