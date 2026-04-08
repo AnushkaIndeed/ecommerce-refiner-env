@@ -3,15 +3,23 @@ from fastapi import FastAPI, Request
 import gradio as gr
 import uvicorn
 
-from tasks import TASKS
+
+try:
+    from tasks import TASKS as RAW_TASKS
+except:
+    from server.tasks import TASKS as RAW_TASKS
+
+TASKS = []
+for diff in RAW_TASKS:
+    for t in RAW_TASKS[diff]:
+        TASKS.append({
+            "input": t["input"],
+            "target": t["target"]["brand"].upper()
+        })
 
 app = FastAPI()
 
-# Precompute valid brands
-VALID_BRANDS = set()
-for diff in TASKS:
-    for t in TASKS[diff]:
-        VALID_BRANDS.add(t["target"]["brand"].upper())
+CURRENT_TASK = None
 
 
 # ---------------- API ENDPOINTS ---------------- #
@@ -21,39 +29,32 @@ async def health():
     return {"status": "ok"}
 
 
-CURRENT_TARGET = ""
-
 @app.post("/reset")
 async def reset():
-    global CURRENT_TARGET
+    global CURRENT_TASK
 
-    all_tasks = TASKS["easy"] + TASKS["medium"] + TASKS["hard"]
-    selected = random.choice(all_tasks)
+    CURRENT_TASK = random.choice(TASKS)
 
-    CURRENT_TARGET = selected["target"]["brand"]
-
-    return {"observation": selected["input"]}
+    return {"observation": CURRENT_TASK["input"]}
 
 
 @app.post("/step")
 async def step(request: Request):
     try:
+        global CURRENT_TASK
+
         data = await request.json()
         val = data.get("value", "").upper().strip()
+        correct = CURRENT_TASK["target"]
 
-        global CURRENT_TARGET
-
-        correct = CURRENT_TARGET.upper()
-
-        
         if val == correct:
-            reward = 0.9   # not 1.0
+            reward = 0.9
         elif correct in val or val in correct:
-            reward = 0.6   # partial match
+            reward = 0.6
         elif val != "":
-            reward = 0.3   # attempt made
+            reward = 0.3
         else:
-            reward = 0.1   # empty
+            reward = 0.1
 
         return {"reward": reward}
 
@@ -68,9 +69,10 @@ def refine_ui_logic(text):
         return "Error: Please enter a product title."
 
     text = text.upper()
-    for brand in VALID_BRANDS:
-        if brand in text:
-            return brand
+
+    for task in TASKS:
+        if task["target"] in text:
+            return task["target"]
 
     return "UNKNOWN"
 
@@ -93,7 +95,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     submit_btn.click(fn=refine_ui_logic, inputs=input_box, outputs=output_box)
 
 
-# Mount UI at root "/"
+# Mount UI
 app = gr.mount_gradio_app(app, demo, path="/")
 
 
