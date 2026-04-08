@@ -33,7 +33,7 @@ def run_inference():
         # Step 2: AI Thinking
         completion = client.chat.completions.create(
             model=MODEL_NAME,
-            messages=[{"role": "user", "content": f"Extract the Brand name from this product title: {observation}"}]
+            messages=[{"role": "user", "content": f"Extract ONLY the brand name from this product title. Output one word only. Title: {observation}"}]
         )
         brand = completion.choices[0].message.content.strip().upper()
 

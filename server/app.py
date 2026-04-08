@@ -4,7 +4,8 @@ import uvicorn
 import gradio as gr
 from fastapi import FastAPI, Request
 from google import genai
-from tasks import TASKS 
+
+from tasks import TASKS
 
 
 app = FastAPI()
@@ -91,7 +92,8 @@ app = gr.mount_gradio_app(app, io, path="/")
 
 def main():
     """Required by the OpenEnv validator for multi-mode deployment."""
-    uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
+    uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=False)
 
 if __name__ == "__main__":
     main()
+    
