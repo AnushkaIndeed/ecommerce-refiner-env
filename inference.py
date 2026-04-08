@@ -14,9 +14,14 @@ SPACE_URL = os.getenv("SPACE_URL", "http://localhost:7860")
 client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
 
 def run_inference():
-    
-    print("Waiting 5 seconds for server stability...", flush=True)
-    time.sleep(5)
+    print("Waiting for server stability...", flush=True)
+    for i in range(10):
+        try:
+            response = requests.get(f"{url}/health", timeout=5)
+            if response.status_code == 200:
+                break
+        except:
+            time.sleep(3)
     
     print(f"[START] task={MODEL_NAME}", flush=True)
     
