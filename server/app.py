@@ -4,51 +4,47 @@ import uvicorn
 import gradio as gr
 from fastapi import FastAPI, Request
 from google import genai
-from tasks import TASKS
+
+# Relative import for the tasks file
+try:
+    from tasks import TASKS
+except ImportError:
+    from server.tasks import TASKS
 
 app = FastAPI()
-
-
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
 @app.get("/health")
-async def health():
-    return {"status": "online"}
+async def health(): return {"status": "online"}
 
 @app.post("/reset")
-async def reset(difficulty: str = "easy"):
-    task_list = TASKS.get(difficulty, TASKS["easy"])
-    selected = random.choice(task_list)
+async def reset():
+    all_tasks = TASKS["easy"] + TASKS["medium"] + TASKS["hard"]
+    selected = random.choice(all_tasks)
     return {"observation": selected["input"]}
 
 @app.post("/step")
 async def step(request: Request):
-    try:
-        data = await request.json()
-        value = data.get("value", "").upper().strip()
+    data = await request.json()
+    val = data.get("value", "").upper().strip()
     
-        # DYNAMIC VALIDATION: Check against all brands in tasks.py
-        all_brands = set()
-        for diff in TASKS:
-            for t in TASKS[diff]:
-                brand = t.get("target", {}).get("brand", "").upper()
-                if brand: all_brands.add(brand)
-        
-        if value in all_brands:
-            return {"observation": "Success", "reward": 1.0}
-        return {"observation": "Invalid Brand", "reward": 0.0}
-    except Exception as e:
-        return {"observation": str(e), "reward": 0.0}
+    # Dynamic Validation: Ensures reward=1.0 for any brand in tasks.py
+    valid_brands = set()
+    for diff in TASKS:
+        for t in TASKS[diff]:
+            valid_brands.add(t["target"]["brand"].upper())
+            
+    reward = 1.0 if val in valid_brands else 0.0
+    return {"reward": reward}
 
-# Gradio interface for manual testing
+# Professional UI
 def ui_fn(text):
-    model_id = os.getenv("MODEL_NAME", "gemini-2.5-flash")
-    res = client.models.generate_content(model=model_id, contents=f"Brand of: {text}")
+    res = client.models.generate_content(model="gemini-2.5-flash", contents=f"Extract brand from: {text}")
     return res.text
 
-io = gr.Interface(fn=ui_fn, inputs="text", outputs="text")
+io = gr.Interface(fn=ui_fn, inputs="text", outputs="text", title="Ecommerce Refiner")
 app = gr.mount_gradio_app(app, io, path="/")
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=7860)
+    uvicorn.run(app, host="0.0.0.0", port=7860)
