@@ -82,7 +82,7 @@ io = gr.Interface(
     inputs=gr.Textbox(label="Paste Messy Product Title", placeholder="e.g. ADIDAS ULTRABOOST BLUE 42"),
     outputs=gr.Textbox(label="Refined Result"),
     title="🛒 Ecommerce Product Refiner",
-    description="Extracts structured data from messy titles using Google Gemini AI."
+    description="Extracts structured data from messy titles ."
 )
 
 
